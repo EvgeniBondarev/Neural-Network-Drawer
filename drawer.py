@@ -42,20 +42,35 @@ class NeuralNetworkDiagram:
         Returns:
         None
         """
+
         n_layers = len(layer_sizes)
-
+    
         if n_layers > self.max_n_layers_size:
-            layer_sizes = [*layer_sizes[:3], 0, *layer_sizes[-3:]]
+            layer_sizes = [*layer_sizes[:int(self.max_n_layers_size / 2)], 0, *layer_sizes[-int(self.max_n_layers_size / 2):]]
 
-        v_spacing = (top - bottom) / max(layer_sizes)
-        h_spacing = (right - left) / (n_layers - 1)
+        layers_data = []
+        for layer_size in layer_sizes:
+            if layer_size > self.max_layer_size:
+                tmp = []
+                for i in range(1, int(self.max_layer_size / 2)+1):
+                    tmp.append(i)
+                tmp.append(-1)
+                for i in range(int(self.max_layer_size / 2), 0, -1):
+                    tmp.append(layer_size-i+1)
+                layers_data.append(tmp)
+            else:
+                layers_data.append([i for i in range(1, layer_size+1)])
+                
+        v_spacing = (top - bottom) / max([len(i) for i in layers_data])
+        h_spacing = (right - left) / (len(layers_data) - 1)
 
-        for n, layer_size in enumerate(layer_sizes):
-            if layer_size == 0:
+        for n, layer_data in enumerate(layers_data):
+            if len(layer_data) == 0:
                 self.__draw_vertical_dots(ax, n * h_spacing + left, (top + bottom) / 2.)
             else:
-                self.__draw_neurons(ax, n, layer_size, v_spacing, h_spacing, left, top, bottom)
+                self.__draw_neurons(ax, n, layer_data, v_spacing, h_spacing, left, top, bottom)
 
+        layer_sizes = [len(i) for i in layers_data]
         for n, (layer_size_a, layer_size_b) in enumerate(zip(layer_sizes[:-1], layer_sizes[1:])):
             self.__draw_connections(ax, n, layer_size_a, layer_size_b, v_spacing, h_spacing, left, top, bottom)
 
@@ -73,7 +88,7 @@ class NeuralNetworkDiagram:
         """
         ax.text(x, y, '⁞', fontsize=30, verticalalignment='center', ha='center')
 
-    def __draw_neurons(self, ax, n, layer_size, v_spacing, h_spacing, left, top, bottom):
+    def __draw_neurons(self, ax, n, layer_data, v_spacing, h_spacing, left, top, bottom):
         """
         Draws neurons on the plot.
         
@@ -90,16 +105,15 @@ class NeuralNetworkDiagram:
         Returns:
         None
         """
-        layer_top = v_spacing * (layer_size - 1) / 2. + (top + bottom) / 2.
-        neurons_to_draw = range(layer_size) if layer_size <= self.max_layer_size else [*range(3), '…', *range(layer_size - 3, layer_size)]
-
-        for m in neurons_to_draw:
-            if m == '…':
-                ax.text(n * h_spacing + left, (top + bottom) / 2., '…', fontsize=25, verticalalignment='center')
+        layer_top = v_spacing * (len(layer_data) - 1) / 2. + (top + bottom) / 2.
+ 
+        for i, m in enumerate(layer_data):
+            if m == -1:
+                ax.text(n * h_spacing + left, (top + bottom) / 2., '…', fontsize=10, verticalalignment='center')
             else:
-                self.__draw_neuron(ax, n, m, layer_top, v_spacing, h_spacing, left)
+                self.__draw_neuron(ax, n, i, layer_top, v_spacing, h_spacing, left)
                 if self.show_neuron_numbers:
-                    ax.text(n * h_spacing + left, layer_top - m * v_spacing, str(m + 1), fontsize=8, zorder=5)
+                    ax.text(n * h_spacing + left - len(str(m))/200, layer_top - (i * v_spacing - 1/200), str(m), fontsize=8, zorder=5)
 
     def __draw_neuron(self, ax, n, m, layer_top, v_spacing, h_spacing, left):
         """
